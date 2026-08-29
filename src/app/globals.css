@@ -1,26 +1,2271 @@
 @import "tailwindcss";
 
+/* ============================================================================
+   ASCENT ELEVATOR — Hybrid Monochrome Premium (v1 prototype)
+   Token layer per DESIGN.md §A.2. All HEX values are PLACEHOLDER / TBD —
+   they encode roles, not a brand decision. Brand arrival: DESIGN.md §A.14.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- Neutral tone scale (warm-neutral, PLACEHOLDER values) --- */
+  --tone-0: #f6f5f3;
+  --tone-1: #eceae6;
+  --tone-2: #dddbd5;
+  --tone-3: #c3c0b9;
+  --tone-4: #a5a29a;
+  --tone-5: #82807a;
+  --tone-6: #5d5b56;
+  --tone-7: #3a3936;
+  --tone-8: #232221;
+  --tone-9: #171614;
+  --tone-10: #0e0d0c;
+
+  /* --- Ascent brand accent — derived from the logo wordmark
+         (CMYK 0/100/100/0 ≈ #ED1C24 in public/brand/ascent-logo.pdf).
+         Controlled: deepened / lifted per polarity for WCAG AA, never a region
+         fill. Used only for focus + very selective interaction (MOTION.md §4,
+         DESIGN.md §A.2). Reconcile with the vector source when it arrives. --- */
+  --brand-red: #ed1c24; /* reference only */
+  --accent-light: #c21a1f; /* text/UI on light — ≥ 4.5:1 on --tone-0 */
+  --accent-dark: #f0564e; /* text/UI on dark  — ≥ 4.5:1 on --tone-9 */
+  --accent-strong-light: #a81419; /* filled control, white text — ≥ 4.5:1 */
+  --accent-strong-dark: #f0564e; /* filled control, ink text — ≥ 4.5:1 */
+
+  /* --- Spacing / rhythm (DESIGN.md §A.5) --- */
+  --space-gutter: clamp(1.25rem, 5vw, 6rem);
+  --space-section: clamp(4.5rem, 11vw, 12rem);
+  --content-max: 96rem;
+
+  /* --- Chrome --- */
+  --header-h: 4rem;
+  --radius: 2px;
+  --hairline-w: 1px;
+
+  /* --- Motion (DESIGN.md §A.12) --- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-micro: 0.26s;
+  --opening-dur: 0.62s;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 5rem;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Polarity — semantic tokens flip by room, NOT by OS theme.
+   A section declares its room; every component inside reads these vars.
+   -------------------------------------------------------------------------- */
+.room-light {
+  --surface: var(--tone-0);
+  --surface-raised: var(--tone-1);
+  --fg: var(--tone-10);
+  --fg-muted: var(--tone-6);
+  --hairline: var(--tone-2);
+  --accent: var(--accent-light);
+  --accent-strong: var(--accent-strong-light);
+  --focus-ring: var(--accent-light);
+  --cta-bg: var(--tone-10);
+  --cta-bg-hover: var(--tone-8);
+  --cta-fg: var(--tone-0);
+  color-scheme: light;
+}
+
+.room-dark {
+  --surface: var(--tone-9);
+  --surface-raised: var(--tone-8);
+  --fg: var(--tone-0);
+  --fg-muted: var(--tone-4);
+  --hairline: var(--tone-7);
+  --accent: var(--accent-dark);
+  --accent-strong: var(--accent-strong-dark);
+  --focus-ring: var(--accent-dark);
+  /* calm off-white fill (not pure white glare) — still the highest-contrast
+     element on the surface. DESIGN.md §A.7 */
+  --cta-bg: var(--tone-1);
+  --cta-bg-hover: var(--tone-0);
+  --cta-fg: var(--tone-10);
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-hairline: var(--hairline);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ----------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* first paint is the dark opening surface — avoid a light flash */
+  background: var(--tone-10);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100%;
+  background: var(--surface, var(--tone-9));
+  color: var(--fg, var(--tone-0));
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Browser surfaces themed from the palette (craft floor) */
+::selection {
+  background: var(--fg, var(--tone-0));
+  color: var(--surface, var(--tone-9));
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--accent-dark));
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ----------------------------------------------------------------------------
+   Layout helpers
+   -------------------------------------------------------------------------- */
+.shell {
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding-inline: var(--space-gutter);
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 400;
+  padding: 0.65rem 1rem;
+  background: var(--tone-0);
+  color: var(--tone-10);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transform: translateY(-160%);
+  transition: transform 0.18s var(--ease-out);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* ----------------------------------------------------------------------------
+   Buttons (token-driven, work on any room)
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.75rem 1.4rem;
+  border: var(--hairline-w) solid transparent;
+  border-radius: var(--radius);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+.btn--primary {
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+@media (hover: hover) {
+  .btn--primary:hover {
+    background: var(--cta-bg-hover);
+  }
+}
+
+/* Secondary — editorial text link, not a bordered button (DESIGN.md §A.7) */
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding-block: 0.5rem;
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  letter-spacing: 0.005em;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.link-more__label {
+  position: relative;
+}
+.link-more__label::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.28em;
+  height: var(--hairline-w);
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.32s var(--ease-out);
+}
+.link-more__chevron {
+  flex-shrink: 0;
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+@media (hover: hover) {
+  .link-more:hover {
+    color: var(--fg);
+  }
+  .link-more:hover .link-more__label::after {
+    transform: scaleX(1);
+  }
+  .link-more:hover .link-more__chevron {
+    transform: translateY(2px);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Opening light reveal (DESIGN.md §A.8)
+   Server-rendered so it covers on first paint; self-completes via CSS even
+   with no JS. The client controller only refines (skip-on-interaction,
+   once-per-session, cleanup).
+   -------------------------------------------------------------------------- */
+#opening {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: hidden;
+  pointer-events: none;
+  background: transparent;
+}
+#opening .oh {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 51%;
+  background: var(--tone-10);
+  will-change: transform;
+  animation-duration: var(--opening-dur);
+  animation-timing-function: var(--ease-out);
+  animation-delay: 0.12s;
+  animation-fill-mode: forwards;
+}
+#opening .oh-l {
+  left: 0;
+  animation-name: opening-part-left;
+}
+#opening .oh-r {
+  right: 0;
+  animation-name: opening-part-right;
+}
+#opening .oseam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 42vh;
+  translate: -50% -50%;
+  background: var(--tone-2);
+  opacity: 0;
+  animation: opening-seam calc(var(--opening-dur) + 0.12s) var(--ease-out) forwards;
+}
+#opening .oseam::after {
+  content: "";
+  position: absolute;
+  inset: -1px -2px;
+  background: var(--tone-4);
+  opacity: 0.35;
+}
+#opening[data-skip] .oh {
+  animation-duration: 0.14s;
+  animation-delay: 0s;
+}
+#opening[data-skip] .oseam {
+  animation-duration: 0.14s;
+}
+#opening[data-done] {
+  display: none;
+}
+/* set by the pre-paint inline script when the reveal already played this session */
+.ascent-opened #opening {
+  display: none !important;
+}
+
+@keyframes opening-part-left {
+  to {
+    transform: translateX(-101%);
+  }
+}
+@keyframes opening-part-right {
+  to {
+    transform: translateX(101%);
+  }
+}
+@keyframes opening-seam {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.4);
+  }
+  35% {
+    opacity: 0.9;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --opening-dur: 0.42s;
+  }
+  #opening .oseam {
+    height: 30vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #opening .oh {
+    animation: opening-fade 0.16s linear 0.04s forwards;
+    transform: none;
+  }
+  #opening .oseam {
+    display: none;
+  }
+  @keyframes opening-fade {
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Site header (DESIGN.md §A.7)
+   -------------------------------------------------------------------------- */
+.site-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 120;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  color: var(--fg);
+  transition:
+    background-color 0.32s var(--ease-out),
+    border-color 0.32s var(--ease-out),
+    color 0.32s var(--ease-out);
+  border-bottom: var(--hairline-w) solid transparent;
+}
+.site-header[data-state="pinned"] {
+  background: var(--surface);
+  border-bottom-color: var(--hairline);
+}
+.site-header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: clamp(0.75rem, 3vw, 2.5rem);
+}
+.wordmark {
+  /* text wordmark placeholder — real logo is TBD (DESIGN.md §A.14) */
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 44px;
+  font-weight: 500;
+  font-size: clamp(0.9rem, 2.4vw, 0.98rem);
+  letter-spacing: 0.34em;
+  padding-inline-end: 0.34em;
+  color: var(--fg);
+}
+
+.site-nav {
+  display: none;
+}
+.site-nav__list {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.75rem, 3.4vw, 3.25rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.site-nav__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--fg-muted);
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.site-nav__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(50% - 0.85em);
+  height: var(--hairline-w);
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s var(--ease-out);
+}
+@media (hover: hover) {
+  .site-nav__link:hover {
+    color: var(--fg);
+  }
+  .site-nav__link:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+/* thin vertical rule between links and the CTA — architectural rhythm */
+.site-header__rule {
+  display: none;
+  width: var(--hairline-w);
+  height: 1.5rem;
+  margin-inline: clamp(0.4rem, 1.2vw, 0.9rem);
+  background: var(--hairline);
+}
+
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.35rem, 2vw, 0.5rem);
+  min-width: 0;
+}
+.btn--compact {
+  min-height: 44px;
+  padding: 0.55rem clamp(0.85rem, 2.5vw, 1.15rem);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* mobile static floor indicator (MOTION.md §6) — desktop uses .shaft */
+.floor-slot {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out);
+}
+.floor-slot[data-active="true"] {
+  opacity: 1;
+}
+/* keyed on floor.num — a short crossfade when the floor changes */
+.floor-slot__content {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  animation: floor-slot-in 0.24s var(--ease-out);
+}
+@keyframes floor-slot-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.floor-slot__num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: var(--fg);
+}
+.floor-slot__label {
+  font-size: 0.6875rem;
+  letter-spacing: 0.01em;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: var(--hairline-w) solid var(--hairline);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.menu-toggle__glyph,
+.menu-toggle__glyph::before,
+.menu-toggle__glyph::after {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: currentColor;
+  transition: transform 0.24s var(--ease-out), opacity 0.16s linear;
+}
+.menu-toggle__glyph::before,
+.menu-toggle__glyph::after {
+  content: "";
+  position: absolute;
+}
+.menu-toggle__glyph::before {
+  transform: translateY(-6px);
+}
+.menu-toggle__glyph::after {
+  transform: translateY(6px);
+}
+.menu-toggle[aria-expanded="true"] .menu-toggle__glyph {
+  transform: rotate(45deg);
+}
+.menu-toggle[aria-expanded="true"] .menu-toggle__glyph::before {
+  transform: translateY(0) rotate(90deg);
+}
+.menu-toggle[aria-expanded="true"] .menu-toggle__glyph::after {
+  opacity: 0;
+}
+
+/* Mobile menu panel (minimal base — DESIGN.md §A.7) */
+.menu-panel {
+  position: fixed;
+  inset: var(--header-h) 0 0 0;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.5rem var(--space-gutter) 2.5rem;
+  background: var(--surface);
+  border-top: var(--hairline-w) solid var(--hairline);
+  transform: translateY(-8px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.22s var(--ease-out),
+    transform 0.22s var(--ease-out),
+    visibility 0s linear 0.22s;
+}
+.menu-panel[data-open="true"] {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.menu-panel__link {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  font-size: 1.125rem;
+  color: var(--fg);
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.menu-panel__cta {
+  margin-top: 1.25rem;
+}
+
+/* Full link row + CTA divider from laptop up; compact bar (menu button +
+   floor indicator) below that, so the scroll-elevator has one consistent
+   presentation: navbar floor slot ≤1023, shaft ≥1024, no gap. */
+@media (min-width: 1024px) {
+  .site-nav {
+    display: block;
+  }
+  .site-header__rule {
+    display: block;
+  }
+  .menu-toggle,
+  .menu-panel {
+    display: none;
+  }
+}
+@media (max-width: 1023px) {
+  .floor-slot {
+    display: inline-flex;
+  }
+}
+@media (max-width: 400px) {
+  .floor-slot__label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .site-header,
+  .menu-panel,
+  .menu-toggle__glyph,
+  .menu-toggle__glyph::before,
+  .menu-toggle__glyph::after,
+  .btn {
+    transition-duration: 0.01ms;
+  }
+  .floor-slot,
+  .floor-slot__content {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Hero (DESIGN.md §A.4 typography, §A.5 grid, §A.2 tonal depth)
+   -------------------------------------------------------------------------- */
+.hero {
+  position: relative;
+  isolation: isolate;
+  background: var(--surface);
+  color: var(--fg);
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-block: calc(var(--header-h) + clamp(2.5rem, 8vh, 6rem)) var(--space-section);
+}
+@media (max-width: 767px) {
+  .hero {
+    min-height: auto;
+    align-items: flex-start;
+    padding-block: calc(var(--header-h) + 2.75rem) 3.5rem;
+  }
+}
+.hero__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(2.5rem, 6vw, 4rem);
+  align-items: center;
+  width: 100%;
+}
+.hero__body {
+  max-width: 42rem;
+}
+
+.hero__title {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6.6vw, 5.75rem);
+  line-height: 1.0;
+  letter-spacing: -0.032em;
+  overflow-wrap: break-word;
+}
+.hero__title .l {
+  display: block;
+}
+.hero__title .l--strong {
+  font-weight: 500;
+  color: var(--fg);
+}
+.hero__title .l--soft {
+  font-weight: 400;
+  font-size: 0.86em;
+  color: var(--fg-muted);
+}
+
+.hero__lede {
+  margin: clamp(1.75rem, 3.4vw, 2.75rem) 0 0;
+  max-width: 46ch;
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  line-height: 1.62;
+  color: var(--fg-muted);
+}
+.hero__lede::before {
+  content: "";
+  display: block;
+  width: 2.75rem;
+  height: var(--hairline-w);
+  margin-bottom: clamp(1rem, 2vw, 1.5rem);
+  background: var(--hairline);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  margin-top: clamp(2.25rem, 4.5vw, 3.25rem);
+}
+@media (max-width: 479px) {
+  .hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .hero__actions .btn,
+  .hero__actions .link-more {
+    width: 100%;
+  }
+  .hero__actions .link-more {
+    justify-content: flex-start;
+  }
+}
+
+/* Right column: an empty spacer that reserves room for the fixed
+   <ElevatorScene> (MOTION.md v2). Desktop-only. */
+.hero__aside {
+  display: none;
+  align-self: stretch;
+  min-height: min(72vh, 40rem);
+}
+
+@media (min-width: 1024px) {
+  .hero__grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+  .hero__aside {
+    display: block;
+  }
+}
+
+/* Hero reveal — CSS only, plays on load, subtle (DESIGN.md §A.4 / §A.12) */
+@media (prefers-reduced-motion: no-preference) {
+  .hero__title .l,
+  .hero__lede,
+  .hero__actions {
+    animation: hero-rise 0.55s var(--ease-out) both;
+  }
+  .hero__title .l:nth-child(1) {
+    animation-delay: 0.34s;
+  }
+  .hero__title .l:nth-child(2) {
+    animation-delay: 0.42s;
+  }
+  .hero__title .l:nth-child(3) {
+    animation-delay: 0.5s;
+  }
+  .hero__lede {
+    animation-delay: 0.6s;
+  }
+  .hero__actions {
+    animation-delay: 0.68s;
+  }
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* mobile: keep motion minimal — fade only, no travel */
+  @media (max-width: 767px) {
+    .hero__title .l,
+    .hero__lede,
+    .hero__actions {
+      animation-name: hero-fade;
+    }
+    @keyframes hero-fade {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Reveal-on-view (DESIGN.md §A.12) — used by sections 02+.
+   Hidden state only applies while <html class="js"> is set; no JS -> visible.
+   -------------------------------------------------------------------------- */
+.r-up {
+  transition:
+    opacity 0.28s var(--ease-out),
+    transform 0.28s var(--ease-out);
+}
+.js [data-reveal="pending"] .r-up {
+  opacity: 0;
+  transform: translateY(10px);
+}
+[data-reveal="shown"] .r-up {
+  opacity: 1;
+  transform: none;
+}
+/* small stagger for list-like groups */
+[data-reveal="shown"] .r-up:nth-child(2) {
+  transition-delay: 0.05s;
+}
+[data-reveal="shown"] .r-up:nth-child(3) {
+  transition-delay: 0.1s;
+}
+[data-reveal="shown"] .r-up:nth-child(4) {
+  transition-delay: 0.15s;
+}
+[data-reveal="shown"] .r-up:nth-child(5) {
+  transition-delay: 0.2s;
+}
+/* mobile: fade only, no translate (DESIGN.md §A.12 — mobil motion azaltımı) */
+@media (max-width: 767px) {
+  .js [data-reveal="pending"] .r-up {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal="pending"] .r-up,
+  [data-reveal="shown"] .r-up {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   SectionCapabilities — typography-led service list (used on /servisler)
+   -------------------------------------------------------------------------- */
+.cap {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(3.5rem, 9vw, 8rem);
+}
+.cap__inner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(2.5rem, 6vw, 4.5rem);
+}
+/* shared section index label ("01 · Çözümler") */
+.sec-index {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 1.25rem;
+}
+.sec-index__num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--fg);
+}
+.sec-index__label {
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+}
+.cap__heading {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3.4vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  max-width: 16ch;
+}
+.cap__note {
+  margin: 1.25rem 0 0;
+  max-width: 34ch;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+.cap__note::before {
+  content: "";
+  display: inline-block;
+  width: 1.5rem;
+  height: var(--hairline-w);
+  margin-right: 0.55rem;
+  vertical-align: middle;
+  background: var(--hairline);
+}
+.cap__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.cap__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  padding-block: clamp(1.5rem, 3vw, 2.25rem);
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.cap__row-title {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(1.25rem, 2vw, 1.625rem);
+  letter-spacing: -0.015em;
+}
+.cap__row-body {
+  margin: 0;
+  max-width: 52ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.6;
+  color: var(--fg-muted);
+}
+.cap__row-link {
+  margin-top: 0.35rem;
+}
+
+@media (min-width: 768px) {
+  .cap__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title link"
+      "body  link";
+    column-gap: clamp(1.5rem, 4vw, 4rem);
+    align-items: baseline;
+  }
+  .cap__row-title {
+    grid-area: title;
+  }
+  .cap__row-body {
+    grid-area: body;
+    margin-top: 0.6rem;
+  }
+  .cap__row-link {
+    grid-area: link;
+    margin-top: 0;
+    align-self: center;
+  }
+}
+@media (min-width: 1024px) {
+  .cap__inner {
+    grid-template-columns: minmax(0, 3.5fr) minmax(0, 8.5fr);
+    column-gap: clamp(2.5rem, 6vw, 6rem);
+    align-items: start;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   SectionSolutions — full-bleed dark editorial slabs (used on /cozumler)
+   -------------------------------------------------------------------------- */
+.sol {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(3.5rem, 9vw, 8rem);
+}
+.sol__head {
+  margin-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+.sol__heading {
+  margin: 0;
+  max-width: 20ch;
+  font-weight: 400;
+  font-size: clamp(2rem, 4.4vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+.sol__intro {
+  margin: clamp(1.25rem, 2.5vw, 1.75rem) 0 0;
+  max-width: 44ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.6;
+  color: var(--fg-muted);
+}
+
+.sol__list {
+  display: flex;
+  flex-direction: column;
+}
+.sol__panel-wrap {
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.sol__panel-wrap:last-child {
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.sol__panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1.5rem, 3.5vw, 3rem);
+  align-items: center;
+  width: 100%;
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: clamp(2rem, 5vw, 4rem) var(--space-gutter);
+}
+.sol__panel-body {
+  max-width: 40ch;
+}
+.sol__panel-title {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+  letter-spacing: -0.02em;
+}
+.sol__panel-text {
+  margin: clamp(0.85rem, 1.6vw, 1.15rem) 0 clamp(1.25rem, 2.4vw, 1.75rem);
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.62;
+  color: var(--fg-muted);
+}
+
+/* abstract architectural composition per panel — desktop-only, tonal + hairline */
+.sol__panel-figure {
+  display: none;
+}
+.pf {
+  position: relative;
+  width: 100%;
+  height: clamp(15rem, 26vw, 22rem);
+  overflow: hidden;
+}
+.pf-well {
+  position: absolute;
+  inset: 0;
+  background: var(--tone-10);
+}
+
+/* shaft — strong vertical structural pier beside a recessed void */
+.pf--shaft .pf-recess {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  right: 16%;
+  background: var(--tone-9);
+}
+.pf--shaft .pf-pier {
+  position: absolute;
+  top: 7%;
+  bottom: 7%;
+  left: 42%;
+  width: 9px;
+  background: var(--tone-6);
+}
+.pf--shaft .pf-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(42% + 9px);
+  width: var(--hairline-w);
+  background: var(--tone-5);
+}
+.pf--shaft .pf-rung {
+  position: absolute;
+  left: 50%;
+  right: 16%;
+  height: var(--hairline-w);
+  background: var(--tone-7);
+}
+.pf--shaft .pf-rung--1 {
+  top: 20%;
+}
+.pf--shaft .pf-rung--2 {
+  top: 40%;
+}
+.pf--shaft .pf-rung--3 {
+  top: 60%;
+}
+.pf--shaft .pf-rung--4 {
+  top: 80%;
+}
+
+/* strata — horizontal floor rhythm: a stack of plates sliced by the shaft */
+.pf--strata .pf-plate {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 8%;
+  background: var(--tone-8);
+}
+.pf--strata .pf-plate--1 {
+  top: 12%;
+}
+.pf--strata .pf-plate--2 {
+  top: 29%;
+}
+.pf--strata .pf-plate--3 {
+  top: 46%;
+  background: var(--tone-9);
+}
+.pf--strata .pf-plate--4 {
+  top: 63%;
+}
+.pf--strata .pf-plate--5 {
+  top: 80%;
+}
+.pf--strata .pf-cut {
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  left: 64%;
+  width: var(--hairline-w);
+  background: var(--tone-5);
+}
+
+/* frame — an open structural frame with cross members and a node */
+.pf--frame .pf-frame {
+  position: absolute;
+  inset: 14% 12% 14% 22%;
+  border: var(--hairline-w) solid var(--tone-6);
+}
+.pf--frame .pf-member {
+  position: absolute;
+  background: var(--tone-7);
+}
+.pf--frame .pf-member--h {
+  left: 22%;
+  right: 12%;
+  top: 50%;
+  height: var(--hairline-w);
+}
+.pf--frame .pf-member--v {
+  top: 14%;
+  bottom: 14%;
+  left: 55%;
+  width: var(--hairline-w);
+}
+.pf--frame .pf-node {
+  position: absolute;
+  left: calc(55% - 3px);
+  top: calc(50% - 3px);
+  width: 7px;
+  height: 7px;
+  background: var(--tone-5);
+}
+
+@media (min-width: 1024px) {
+  .sol__panel {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+  }
+  .sol__panel-figure {
+    display: block;
+  }
+  .sol__panel[data-flip="true"] .sol__panel-figure {
+    order: 2;
+  }
+  .sol__panel[data-flip="true"] .sol__panel-body {
+    order: 1;
+  }
+}
+
+/* alt-band — kullanım alanları (DRAFT) */
+.sol__band {
+  margin-top: clamp(3rem, 7vw, 6rem);
+}
+.sol__band-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: clamp(1.75rem, 3.5vw, 2.5rem);
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.sol__band-label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+}
+.sol__band-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sol__band-item {
+  font-size: clamp(1rem, 1.6vw, 1.375rem);
+  color: var(--fg);
+}
+
+@media (min-width: 768px) {
+  .sol__band-inner {
+    flex-direction: row;
+    align-items: baseline;
+    gap: clamp(2rem, 5vw, 5rem);
+  }
+  .sol__band-label {
+    flex-shrink: 0;
+  }
+}
+
+/* ============================================================================
+   ELEVATOR SCENE (MOTION.md v2) — the homepage signature visual.
+   Fixed to the right ~38vw, full height, desktop only. Plain CSS geometry
+   (divs + hairlines). Every moving part derives from one custom property
+   `--cabin-p` (0 = hero rest, 1 = final floor):
+     cabin/label translateY, counterweight translateY (opposite), cable scaleY.
+   GSAP ScrollTrigger scrubs `--cabin-p` (elevator-scene.tsx). Colours are fixed:
+   a tone-10 void (deeper than any section) + bright structural hairlines + a
+   light cabin, so it reads over light AND dark sections.
+   ========================================================================== */
+.elevator-scene {
+  --cabin-p: 0;
+  --es-void: var(--tone-10);
+  --es-line: var(--tone-7);
+  --es-line-2: var(--tone-6);
+  --es-rail: var(--tone-5);
+  --es-edge: var(--tone-3);
+  --es-cabin-fill: var(--tone-6);
+  --es-cabin-door: var(--tone-7);
+  --es-cabin-frame: var(--tone-3);
+  --es-cabin-recess: var(--tone-9);
+  --es-bright: var(--tone-2);
+  --es-datum-on: var(--tone-2);
+  --es-text: var(--tone-2);
+  --es-text-dim: var(--tone-5);
+  --es-accent: var(--accent-dark);
+
+  /* vertical centre of the cabin, in vh — datumTopVh() in lib/motion.ts uses
+     the same expression: 80 - --cabin-p * 56 */
+  --cabin-y: calc((80 - var(--cabin-p) * 56) * 1vh);
+
+  display: none;
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: 34vw; /* narrower band for 1024–1439 */
+  height: 100vh;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--es-void);
+}
+@media (min-width: 1024px) {
+  .elevator-scene {
+    display: block;
+  }
+}
+@media (min-width: 1440px) {
+  .elevator-scene {
+    width: min(38vw, 640px); /* full signature scale */
+  }
+}
+
+/* the bright structural edge — reads as a wall between content and shaft */
+.es-frame {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--hairline-w);
+  background: var(--es-edge);
+}
+.es-frame-in {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8%;
+  width: var(--hairline-w);
+  background: var(--es-line-2);
+}
+.es-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--es-rail);
+}
+.es-rail--l {
+  left: 24%;
+}
+.es-rail--r {
+  left: 60%;
+}
+/* counterweight guide, in the right channel */
+.es-rail--cw {
+  left: 74%;
+  width: var(--hairline-w);
+  background: var(--es-line-2);
+}
+/* far shaft wall — closes the composition on the right */
+.es-rail--far {
+  left: 93%;
+  width: var(--hairline-w);
+  background: var(--es-line);
+}
+
+/* hoist head + suspension: crosshead beam, sheave, two cables */
+.es-sheave {
+  position: absolute;
+  top: calc(3.5vh - 6px);
+  left: calc(55% - 6px);
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--es-edge);
+  border-radius: 50%;
+  background: var(--es-void);
+}
+.es-sheave::before {
+  content: "";
+  position: absolute;
+  left: -18%;
+  right: -68%;
+  top: 5px;
+  height: 2px;
+  background: var(--es-rail);
+}
+.es-cable {
+  position: absolute;
+  top: 3.5vh;
+  left: calc(42% - 0.5px);
+  width: var(--hairline-w);
+  height: 100vh;
+  background: var(--es-line-2);
+  transform-origin: top;
+  transform: scaleY(calc(0.09 + (1 - var(--cabin-p)) * 0.76));
+}
+.es-cw-cable {
+  position: absolute;
+  top: 3.5vh;
+  left: calc(74% - 0.5px);
+  width: var(--hairline-w);
+  height: 100vh;
+  background: var(--es-line);
+  transform-origin: top;
+  transform: scaleY(calc(0.05 + var(--cabin-p) * 0.66));
+}
+/* counterweight — travels opposite the cabin */
+.es-counterweight {
+  position: absolute;
+  top: 0;
+  left: 71%;
+  width: 6%;
+  height: 8.5vh;
+  background: var(--es-cabin-door);
+  border: var(--hairline-w) solid var(--es-rail);
+  transform: translateY(calc((5 + var(--cabin-p) * 70) * 1vh));
+}
+.es-counterweight::before {
+  content: "";
+  position: absolute;
+  inset: 16% 32%;
+  border-left: var(--hairline-w) solid var(--es-line-2);
+  border-right: var(--hairline-w) solid var(--es-line-2);
+}
+
+/* floor datum lines — landing side only; top set inline (elevator-scene.tsx) */
+.es-datum {
+  position: absolute;
+  left: 8%;
+  right: 42%;
+  height: var(--hairline-w);
+  background: var(--es-line);
+  opacity: 0.5;
+  transition:
+    opacity 0.45s var(--ease-out),
+    background-color 0.45s var(--ease-out);
+}
+.es-datum[data-active="true"] {
+  opacity: 1;
+  background: var(--es-datum-on);
+}
+/* landing lip — a thicker segment at each floor, structural */
+.es-datum::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 34%;
+  top: -1px;
+  height: 3px;
+  background: var(--es-line-2);
+  transition: background-color 0.45s var(--ease-out);
+}
+.es-datum[data-active="true"]::after {
+  background: var(--es-datum-on);
+}
+.es-datum::before {
+  content: attr(data-num);
+  position: absolute;
+  left: 0;
+  bottom: 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  color: var(--es-text-dim);
+  transition: color 0.45s var(--ease-out);
+}
+.es-datum[data-active="true"]::before {
+  color: var(--es-text);
+}
+
+/* the cabin — an architectural car between the rails; the brightest object */
+.es-cabin {
+  position: absolute;
+  left: 21%;
+  width: 42%;
+  height: clamp(148px, 19vh, 208px);
+  top: 0;
+  transform: translateY(calc(var(--cabin-y) - 50%));
+}
+.es-cabin__roof {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  top: -3px;
+  height: 3px;
+  background: var(--es-cabin-frame);
+}
+.es-cabin__body {
+  position: absolute;
+  inset: 0;
+  background: var(--es-cabin-fill);
+  border: var(--hairline-w) solid var(--es-cabin-frame);
+}
+.es-cabin__panel {
+  position: absolute;
+  top: 10%;
+  bottom: 22%;
+  width: 42%;
+  background: var(--es-cabin-door);
+  border: var(--hairline-w) solid var(--es-cabin-recess);
+}
+.es-cabin__panel--l {
+  left: 5%;
+}
+.es-cabin__panel--r {
+  right: 5%;
+}
+.es-cabin__seam {
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  left: calc(50% - 0.5px);
+  width: var(--hairline-w);
+  background: var(--es-bright);
+  transition: background-color 0.45s var(--ease-out);
+}
+.es-cabin__sill {
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: -2px;
+  height: 2px;
+  background: var(--es-cabin-frame);
+}
+.es-cabin__shoe {
+  position: absolute;
+  top: 42%;
+  width: 7%;
+  height: 16%;
+  background: var(--es-cabin-frame);
+}
+.es-cabin__shoe--l {
+  left: -2%;
+}
+.es-cabin__shoe--r {
+  right: -2%;
+}
+.es-cabin__indicator {
+  position: absolute;
+  top: 12%;
+  right: 11%;
+  width: 5px;
+  height: 5px;
+  background: var(--es-accent);
+  opacity: 0.45;
+  transition: opacity 0.45s var(--ease-out);
+}
+.elevator-scene[data-arrived="true"] .es-cabin__seam {
+  background: var(--es-accent);
+}
+.elevator-scene[data-arrived="true"] .es-cabin__indicator {
+  opacity: 1;
+}
+
+/* vertical floor label — travels with the cabin */
+.es-label {
+  position: absolute;
+  top: 0;
+  left: 2.6%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  writing-mode: vertical-rl;
+  opacity: 0;
+  transform: translateY(calc(var(--cabin-y) - 50%));
+  transition: opacity 0.45s var(--ease-out);
+}
+.elevator-scene[data-active="true"] .es-label {
+  opacity: 1;
+}
+.es-label__num {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--es-text);
+}
+.es-label__name {
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: var(--es-text-dim);
+}
+
+/* reduced motion: static elevator, correct section states, no movement */
+.elevator-scene[data-exiting="true"] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .elevator-scene {
+    /* park the cabin mid-shaft; GSAP never runs so nothing overrides this */
+    --cabin-p: 0.42;
+  }
+  .es-cabin,
+  .es-counterweight,
+  .es-cable,
+  .es-cw-cable,
+  .es-label,
+  .es-datum,
+  .es-datum::before,
+  .es-datum::after,
+  .es-cabin__seam,
+  .es-cabin__indicator,
+  .elevator-scene {
+    transition: none !important;
+  }
+}
+
+/* content sits to the left of the fixed scene on desktop */
+@media (min-width: 1024px) {
+  .home .offer__inner,
+  .home .appr__inner,
+  .home .close__inner {
+    padding-inline-end: 37vw;
+  }
+  /* the inset leaves no room for the offer's 3-column row — stack title/desc */
+  .home .offer__link {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title chevron"
+      "desc chevron";
+    column-gap: clamp(1.5rem, 3vw, 2.5rem);
+    row-gap: 0.5rem;
+  }
+  .home .offer__item-desc {
+    max-width: 52ch;
+  }
+}
+@media (min-width: 1440px) {
+  .home .offer__inner,
+  .home .appr__inner,
+  .home .close__inner {
+    padding-inline-end: min(41vw, 610px);
+  }
+}
+
+/* anchor targets clear the fixed header */
+section[id] {
+  scroll-margin-top: calc(var(--header-h) + 1rem);
+}
+
+/* ============================================================================
+   HOMEPAGE SECTIONS (short premium landing)
+   ========================================================================== */
+
+/* ---- SECTION 02 · Çözümler / Ne Yapıyoruz özeti (light room) ------------- */
+.offer {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: var(--space-section);
+}
+.offer__head {
+  max-width: 40rem;
+  margin-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+.offer__heading {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(1.875rem, 4vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.offer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.offer__item {
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.offer__link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "title chevron"
+    "desc  chevron";
+  align-items: center;
+  column-gap: clamp(1.5rem, 4vw, 3rem);
+  row-gap: 0.5rem;
+  padding-block: clamp(1.75rem, 4vw, 3rem);
+  color: var(--fg);
+}
+.offer__item-title {
+  grid-area: title;
+  font-size: clamp(1.5rem, 3.4vw, 2.5rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.offer__item-desc {
+  grid-area: desc;
+  max-width: 46ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+.offer__item-chevron {
+  grid-area: chevron;
+  color: var(--fg-muted);
+  transition:
+    transform var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+@media (hover: hover) {
+  .offer__link:hover .offer__item-chevron {
+    transform: translateX(4px);
+    color: var(--fg);
+  }
+  .offer__link:hover .offer__item-title {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: var(--hairline-w);
+  }
+}
+/* wide screens: title | supporting text | affordance on one row, so the
+   description fills the width instead of leaving a gulf before the chevron */
+@media (min-width: 1024px) {
+  .offer__link {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas: "title desc chevron";
+    align-items: center;
+    column-gap: clamp(2rem, 4vw, 3.5rem);
+    row-gap: 0;
+  }
+  .offer__item-desc {
+    max-width: 52ch;
+  }
+}
+
+/* ---- SECTION 03 · Ascent Yaklaşımı (dark room, editorial statement) ------ */
+.appr {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(5rem, 14vw, 12rem);
+}
+/* left-aligned within the full-width shell (matches §02 + hero) */
+.appr__statement {
+  margin: clamp(1.5rem, 4vw, 2.5rem) 0 0;
+  max-width: 46rem;
+  font-weight: 400;
+  font-size: clamp(1.75rem, 4.2vw, 3.5rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.appr__principles {
+  margin: clamp(2.75rem, 6vw, 4.5rem) 0 0;
+  padding: 0;
+  max-width: 46rem;
+  list-style: none;
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.appr__principle {
+  margin: 0;
+  max-width: 54ch;
+  padding-block: clamp(1rem, 2.4vw, 1.5rem);
+  border-bottom: var(--hairline-w) solid var(--hairline);
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+.appr__link {
+  margin-top: clamp(2.25rem, 5vw, 3.5rem);
+}
+
+/* ---- SECTION 04 · Projeler (conditional, dark room) --------------------- */
+.proj {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: var(--space-section);
+}
+.proj__head {
+  margin-bottom: clamp(2.5rem, 6vw, 4.5rem);
+}
+.proj__heading {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(1.875rem, 4vw, 3rem);
+  letter-spacing: -0.025em;
+}
+.proj__list {
+  margin: 0 0 clamp(2rem, 5vw, 3rem);
+  padding: 0;
+  list-style: none;
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.proj__item {
+  padding-block: clamp(1.5rem, 3.5vw, 2.5rem);
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.proj__item-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.proj__item-meta {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.proj__item-scope {
+  margin: 0.6rem 0 0;
+  max-width: 50ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+
+/* ---- SECTION 05 · İletişim / Teklif kapanışı (strong final tonal area) --- */
+.close {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(3.5rem, 8vw, 6rem) clamp(4rem, 9vw, 7rem);
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+/* left-aligned within the full-width shell (matches §02 + hero) */
+.close__heading {
+  margin: clamp(1.25rem, 3vw, 2rem) 0 0;
+  max-width: 22ch;
+  font-weight: 400;
+  font-size: clamp(1.875rem, 4.2vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.close__text {
+  margin: clamp(1rem, 2.5vw, 1.5rem) 0 clamp(2rem, 4vw, 2.75rem);
+  max-width: 42ch;
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.6;
+  color: var(--fg-muted);
+}
+.close__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+}
+@media (max-width: 479px) {
+  .close__actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .close__actions .btn,
+  .close__actions .link-more {
+    width: 100%;
+  }
+  .close__actions .link-more {
+    justify-content: flex-start;
+  }
+}
+
+/* ---- SECTION 06 · Footer (deepest tone) -------------------------------- */
+.site-footer {
+  --surface: var(--tone-10);
+  background: var(--surface);
+  color: var(--fg-muted);
+  padding-block: clamp(3rem, 6vw, 4.5rem);
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.site-footer__inner {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+}
+.site-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+.site-footer__wordmark {
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  color: var(--fg);
+}
+.site-footer__tagline {
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.site-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+}
+.site-footer__nav a {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  transition: color var(--dur-micro) var(--ease-out);
+}
+@media (hover: hover) {
+  .site-footer__nav a:hover {
+    color: var(--fg);
+  }
+}
+.site-footer__legal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--fg-muted);
+}
+.site-footer__legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+}
+.site-footer__legal-links a {
+  color: var(--fg-muted);
+  transition: color var(--dur-micro) var(--ease-out);
+}
+@media (hover: hover) {
+  .site-footer__legal-links a:hover {
+    color: var(--fg);
+  }
+}
+@media (min-width: 768px) {
+  .site-footer__inner {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+    column-gap: clamp(2rem, 6vw, 6rem);
+    row-gap: 2rem;
+  }
+  .site-footer__nav {
+    justify-content: flex-end;
+  }
+  .site-footer__legal {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: var(--hairline-w) solid var(--hairline);
+  }
+}
+
+/* ============================================================================
+   SUB-PAGE: /cozumler
+   ========================================================================== */
+
+/* ---- Subpage hero (compact, light room) -------------------------------- */
+.subhero {
+  position: relative;
+  isolation: isolate;
+  background: var(--surface);
+  color: var(--fg);
+  overflow: hidden;
+  padding-block: calc(var(--header-h) + clamp(2.75rem, 7vh, 5.5rem))
+    clamp(2.5rem, 6vw, 4.5rem);
+}
+.subhero__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(2.5rem, 6vw, 4rem);
+  align-items: center;
+  width: 100%;
+}
+.subhero__body {
+  max-width: 44rem;
+}
+.subhero__crumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: clamp(1.75rem, 4vw, 2.75rem);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+}
+.subhero__crumb a {
+  color: var(--fg-muted);
+  transition: color var(--dur-micro) var(--ease-out);
+}
+@media (hover: hover) {
+  .subhero__crumb a:hover {
+    color: var(--fg);
+  }
+}
+.subhero__crumb [aria-current="page"] {
+  color: var(--fg);
+}
+.subhero__heading {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(2.25rem, 5.4vw, 4.25rem);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+.subhero__intro {
+  margin: clamp(1.5rem, 3vw, 2.25rem) 0 0;
+  max-width: 52ch;
+  font-size: clamp(1rem, 1.3vw, 1.1875rem);
+  line-height: 1.62;
+  color: var(--fg-muted);
+}
+
+/* restrained architectural abstraction — desktop only, decorative */
+.subhero__aside {
+  position: relative;
+  display: none;
+  align-self: stretch;
+  min-height: 22rem;
+}
+.subhero__figure {
+  position: absolute;
+  inset: 0 calc(-1 * var(--space-gutter)) 0 0;
+  overflow: hidden;
+}
+/* building-section abstraction: a raised structural slab meeting a deep shaft
+   void across a lit guide rail, floor levels stepping down the void. Controlled
+   asymmetry, three tonal planes, hairlines. No literal drawing. */
+.shf-void {
+  position: absolute;
+  top: 4%;
+  bottom: 4%;
+  left: 38%;
+  right: -1px;
+  background: var(--tone-9);
+}
+.shf-level {
+  position: absolute;
+  left: 38%;
+  right: 8%;
+  height: var(--hairline-w);
+  background: var(--tone-7);
+}
+.shf-level--1 {
+  top: 24%;
+}
+.shf-level--2 {
+  top: 46%;
+}
+.shf-level--3 {
+  top: 72%;
+}
+.shf-rail {
+  position: absolute;
+  top: 2%;
+  bottom: 2%;
+  left: 38%;
+  width: var(--hairline-w);
+  background: var(--tone-5);
+}
+.shf-slab {
+  position: absolute;
+  top: 14%;
+  bottom: 32%;
+  left: 6%;
+  right: 62%;
+  background: var(--tone-2);
+  border: var(--hairline-w) solid var(--hairline);
+}
+.shf-node {
+  position: absolute;
+  left: calc(38% - 3px);
+  top: 46%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  background: var(--tone-5);
+}
+
+@media (min-width: 1024px) {
+  .subhero__grid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  }
+  .subhero__aside {
+    display: block;
+  }
+}
+
+/* ---- Selection guide (short, light room) ------------------------------ */
+.guide {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(3.5rem, 8vw, 6.5rem) clamp(3rem, 6vw, 5rem);
+}
+.guide__head {
+  max-width: 40rem;
+  margin-bottom: clamp(2.25rem, 5vw, 3.5rem);
+}
+.guide__heading {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(1.875rem, 4vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.guide__list {
+  margin: 0;
+  padding: 0;
+  max-width: 54rem;
+  list-style: none;
+  border-top: var(--hairline-w) solid var(--hairline);
+  counter-reset: none;
+}
+.guide__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: clamp(1.25rem, 4vw, 3rem);
+  align-items: baseline;
+  padding-block: clamp(1.25rem, 3vw, 2rem);
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.guide__item-idx {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+.guide__item-body {
+  max-width: 44ch;
+  font-size: clamp(1.0625rem, 1.5vw, 1.375rem);
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+/* the conclusion, clearly set apart from the factor list */
+.guide__closing {
+  margin: clamp(2.5rem, 5vw, 3.75rem) 0 0;
+  padding-top: clamp(1.5rem, 3vw, 2rem);
+  border-top: var(--hairline-w) solid var(--fg);
+  max-width: 26ch;
+  font-size: clamp(1.375rem, 2.4vw, 2rem);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+@media (min-width: 768px) {
+  .guide__item {
+    grid-template-columns: 3.5rem 1fr;
+  }
+}
+
+/* ============================================================================
+   SUB-PAGE: /servisler
+   ========================================================================== */
+
+/* ---- Subpage hero abstraction: measurement / inspection rhythm --------- */
+.subhero__figure--scale {
+  inset: 6% calc(-1 * var(--space-gutter)) 6% 0;
+}
+.subhero__figure--scale .scl-axis {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 20%;
+  width: var(--hairline-w);
+  background: var(--tone-5);
+}
+.subhero__figure--scale .scl-tick {
+  position: absolute;
+  left: 20%;
+  width: 1.5rem;
+  height: var(--hairline-w);
+  background: var(--tone-6);
+}
+/* evenly spaced ticks — a regular service rhythm */
+.subhero__figure--scale .scl-tick:nth-of-type(1) { top: 6%; }
+.subhero__figure--scale .scl-tick:nth-of-type(2) { top: 17.5%; }
+.subhero__figure--scale .scl-tick:nth-of-type(3) { top: 29%; }
+.subhero__figure--scale .scl-tick:nth-of-type(4) { top: 40.5%; }
+.subhero__figure--scale .scl-tick:nth-of-type(5) { top: 52%; }
+.subhero__figure--scale .scl-tick:nth-of-type(6) { top: 63.5%; }
+.subhero__figure--scale .scl-tick:nth-of-type(7) { top: 75%; }
+.subhero__figure--scale .scl-tick:nth-of-type(8) { top: 86.5%; }
+.subhero__figure--scale .scl-tick:nth-of-type(9) { top: 98%; }
+/* one longer tick + a marker — the current inspection point */
+.subhero__figure--scale .scl-tick:nth-of-type(5) {
+  width: 3rem;
+  background: var(--fg-muted);
+}
+.subhero__figure--scale .scl-mark {
+  position: absolute;
+  left: calc(20% - 3px);
+  top: 52%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  background: var(--tone-5);
+}
+/* a faint recessed datum block behind the scale — controlled tonal depth */
+.subhero__figure--scale .scl-datum {
+  position: absolute;
+  top: 14%;
+  bottom: 14%;
+  left: 46%;
+  right: 0;
+  background: var(--surface-raised);
+  border-left: var(--hairline-w) solid var(--hairline);
+}
+
+/* ---- Process timeline (dark room, line-driven) ------------------------- */
+.process {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(3.5rem, 9vw, 8rem);
+}
+.process__head {
+  max-width: 42rem;
+  margin-bottom: clamp(2rem, 5vw, 3.5rem);
+}
+.process__heading {
+  margin: 0;
+  max-width: 20ch;
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3.8vw, 2.875rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.process__intro {
+  margin: clamp(1.25rem, 2.5vw, 1.75rem) 0 0;
+  max-width: 46ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.6;
+  color: var(--fg-muted);
+}
+.process__steps {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  max-width: 46rem;
+  list-style: none;
+}
+/* the connector rail — a left margin rule the indices sit against */
+.process__steps::before {
+  content: "";
+  position: absolute;
+  top: 1.1rem;
+  bottom: 1.1rem;
+  left: 1px;
+  width: var(--hairline-w);
+  background: var(--hairline);
+}
+.process__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  column-gap: clamp(1.25rem, 3vw, 2.25rem);
+  padding-block: clamp(1.25rem, 3vw, 2rem);
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.process__step:first-child {
+  border-top: 0;
+}
+/* a node where each step meets the rail */
+.process__step::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: calc(clamp(1.25rem, 3vw, 2rem) + 0.15em);
+  width: 6px;
+  height: 6px;
+  background: var(--tone-5);
+}
+.process__step-idx {
+  padding-left: 0.9rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  color: var(--fg);
+}
+.process__step-title {
+  margin: 0;
+  font-weight: 500;
+  font-size: clamp(1.125rem, 1.8vw, 1.4375rem);
+  letter-spacing: -0.01em;
+}
+.process__step-text {
+  margin: 0.5rem 0 0;
+  max-width: 44ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+
+/* ---- Scope principles (light room, definition list) ------------------- */
+.scope {
+  background: var(--surface);
+  color: var(--fg);
+  padding-block: clamp(3.5rem, 8vw, 6.5rem) clamp(3rem, 6vw, 5rem);
+}
+.scope__head {
+  max-width: 40rem;
+  margin-bottom: clamp(2.25rem, 5vw, 3.5rem);
+}
+.scope__heading {
+  margin: 0;
+  max-width: 22ch;
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3.8vw, 2.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.scope__list {
+  margin: 0;
+  padding: 0;
+  max-width: 54rem;
+  border-top: var(--hairline-w) solid var(--hairline);
+}
+.scope__item {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  padding-block: clamp(1.1rem, 2.6vw, 1.75rem);
+  border-bottom: var(--hairline-w) solid var(--hairline);
+}
+.scope__item-label {
+  font-weight: 500;
+  font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.scope__item-text {
+  margin: 0;
+  max-width: 52ch;
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+@media (min-width: 768px) {
+  .scope__item {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+    column-gap: clamp(1.5rem, 5vw, 4rem);
+    align-items: baseline;
+  }
 }
